@@ -28,10 +28,11 @@ class User(models.Model):
         return self.username
 
 
+# проверить связку с юзерами
 class Event(models.Model):
     title = models.CharField('Название', max_length=50)
     description = models.TextField('Описание', blank=True)
-    members = models.ManyToManyField(
+    users = models.ManyToManyField(
         User,
         related_name='users',
         verbose_name='Участники',
