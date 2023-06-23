@@ -28,7 +28,6 @@ class User(models.Model):
         return self.username
 
 
-# проверить связку с юзерами
 class Event(models.Model):
     title = models.CharField('Название', max_length=50)
     description = models.TextField('Описание', blank=True)
@@ -64,6 +63,9 @@ class Cutaway(models.Model):
     location = models.CharField('Город', max_length=50, blank=True)
     grade = models.CharField('Грейд', max_length=50, blank=True)
 
+    def __str__(self):
+        return self.user
+
 
 class Speech(models.Model):
     user = models.ForeignKey(
@@ -92,7 +94,7 @@ class Question(models.Model):
         User,
         on_delete=models.CASCADE,
         related_name='questions',
-        verbose_name='слушатель',
+        verbose_name='кто задал',
     )
     text = models.TextField('Вопрос', blank=True)
     speech = models.ForeignKey(
