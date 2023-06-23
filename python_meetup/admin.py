@@ -21,7 +21,9 @@ class UserAdmin(admin.ModelAdmin):
 
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin):
-    pass
+    raw_id_fields = [
+        'users',
+    ]
 
 
 @admin.register(Question)
