@@ -6,7 +6,7 @@ from .models import (
     Question,
     Cutaway,
     Speech,
-    )
+)
 
 
 @admin.register(Role)
@@ -16,7 +16,11 @@ class RoleAdmin(admin.ModelAdmin):
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
-    pass
+    list_display = [
+        'username',
+        'tg_id',
+        'role',
+    ]
 
 
 @admin.register(Event)
@@ -28,14 +32,31 @@ class EventAdmin(admin.ModelAdmin):
 
 @admin.register(Question)
 class QuestionAdmin(admin.ModelAdmin):
-    pass
+    list_display = [
+        'user',
+        'speech',
+        'text',
+    ]
 
 
 @admin.register(Cutaway)
 class CutawayAdmin(admin.ModelAdmin):
-    pass
+    list_display = [
+        'user',
+        'first_name',
+        'last_name',
+        'age',
+        'specialization',
+        'location',
+    ]
 
 
 @admin.register(Speech)
 class SpeechAdmin(admin.ModelAdmin):
-    pass
+    list_display = [
+        'event',
+        'user',
+        'title',
+        'time_start',
+        'time_end',
+    ]
