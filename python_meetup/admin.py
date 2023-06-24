@@ -9,6 +9,13 @@ from .models import (
 )
 
 
+class SpeechInline(admin.TabularInline):
+    model = Speech
+    ordering = [
+        'time_start',
+    ]
+
+
 @admin.register(Role)
 class RoleAdmin(admin.ModelAdmin):
     pass
@@ -28,6 +35,7 @@ class EventAdmin(admin.ModelAdmin):
     raw_id_fields = [
         'users',
     ]
+    inlines = [SpeechInline]
 
 
 @admin.register(Question)
