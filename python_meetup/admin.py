@@ -11,9 +11,6 @@ from .models import (
 
 class SpeechInline(admin.TabularInline):
     model = Speech
-    ordering = [
-        'time_start',
-    ]
 
 
 @admin.register(Role)
@@ -62,9 +59,9 @@ class CutawayAdmin(admin.ModelAdmin):
 @admin.register(Speech)
 class SpeechAdmin(admin.ModelAdmin):
     list_display = [
-        'event',
-        'user',
         'title',
+        'user',
+        'event',
         'time_start',
         'time_end',
     ]

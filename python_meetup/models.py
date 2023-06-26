@@ -4,9 +4,10 @@ from django.db import models
 
 class Role(models.Model):
     ROLES = [
-        ('organizer', 'organizer'),
+        ('admin', 'admin'),
         ('speaker', 'speaker'),
-        ('member', 'member'),
+        ('customer', 'customer'),
+        ('unregistered_customer', 'unregistered_customer'),
     ]
     role = models.CharField('Роль', max_length=50, choices=ROLES)
 
@@ -23,6 +24,7 @@ class User(models.Model):
         null=True,
         related_name='users',
         verbose_name='роль',
+        default='unregistered_customer',
     )
 
     def __str__(self):
@@ -64,9 +66,6 @@ class Cutaway(models.Model):
     location = models.CharField('Город', max_length=50, blank=True)
     grade = models.CharField('Грейд', max_length=50, blank=True)
 
-    def __str__(self):
-        return self.user
-
 
 class Speech(models.Model):
     user = models.ForeignKey(
@@ -85,6 +84,9 @@ class Speech(models.Model):
     description = models.TextField('Описание', blank=True)
     time_start = models.DateTimeField('Время начала', blank=True)
     time_end = models.DateTimeField('Время окончания', blank=True)
+
+    class Meta:
+        ordering = ['time_start']
 
     def __str__(self):
         return self.title

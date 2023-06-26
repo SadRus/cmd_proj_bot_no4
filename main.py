@@ -4,40 +4,32 @@ from dotenv import load_dotenv
 from telegram import ReplyKeyboardMarkup, Bot, ReplyKeyboardRemove, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, ConversationHandler, CallbackQueryHandler
 
-from layouts import customer_main_menu, speaker_main_menu, admin_main_menu, unregistered_customer_menu, customer_menu, \
-    speaker_menu
-
+from layouts import (
+    customer_main_menu,
+    speaker_main_menu,
+    admin_main_menu,
+    unregistered_customer_menu,
+    customer_menu,
+    speaker_menu,
+)
+from python_meetup.views import (
+    check_user,
+    create_cutaway,
+    get_db_schedule,
+    get_random_user,
+)
+from python_meetup.models import User, Role
 
 # TO DO
 # Запросы:
-#     1. Получение статуса по tg_id и заполнение user_survey как {'status': 'admin'}, если нет записи о человеке, он автоматом {'status': 'unregistered_customer'} (строка 45)
-#     2. Получение данных о расписании и вывод в виде str (строка 106)
-#     3. Отправка заполненных данных о посетителе в БД (строка 226)
+#    + 1. Получение статуса по tg_id и заполнение user_survey как {'status': 'admin'}, если нет записи о человеке, он автоматом {'status': 'unregistered_customer'} (строка 45)
+#    + 2. Получение данных о расписании и вывод в виде str (строка 106)
+#    + 3. Отправка заполненных данных о посетителе в БД (строка 226)
 #     4. Отправка вопроса в БД (строка 243)
 #     5. Получение вопроса из БД (желательно вместе с id) (строка 275)
 #     6. Удаление вопроса на который дали ответ (удалить по id) (строка 294)
-#     7. Запрос рандомной записи из анкет (строка 309)
+#    + 7. Запрос рандомной записи из анкет (строка 309)
 #     8. Запросить все tg_id посетителей из БД (массовая рассылка) (строка 329)
-
-# Тестовые данные для использования (для тестирования вставляй свой id)
-# статус один из четырёх:
-#  'admin'
-#  'speaker'
-#  'customer'
-#  'unregistered_customer'
-
-def check_user(user_id): # + запрос
-    if user_id == 406682076:
-        user_survey = {
-            'id': 406682076,
-            'status': 'admin'
-                    }
-    else:
-        user_survey = {
-            'id': 406682076,
-            'status': 'customer'
-        }
-    return user_survey
 
 
 # Главное меню
@@ -48,7 +40,8 @@ def start(update, context):
 
     message = update.message
     user_id = message.from_user.id
-    user_survey.update(check_user(user_id))     # обновляю данные на запрошенные
+    user_survey.update(check_user(user_id))  # обновляю данные на запрошенные
+    print('после', user_survey)
 
     if user_survey['status'] == 'speaker':
         main_menu = speaker_main_menu
@@ -102,13 +95,27 @@ def get_info(update, context):
 
 
 def get_schedule(update, context):
-    menu_pattern = user_survey['status']
-    # ❓ Добавить цикл по запросу времени и названиям
-    # schedule = str([f'{start_time} - {end_time}: {speech}\n{about_speech}' for speech in speeches])
-    keyboard = ReplyKeyboardMarkup(menu_patterns[menu_pattern], one_time_keyboard=True)
-    update.message.reply_text(schedule,
-                              parse_mode='HTML',
-                              reply_markup=keyboard)
+    # menu_pattern = user_survey['status']
+    speeches = get_db_schedule()
+    keyboard = []
+    for speech in speeches:
+        time_start = speech.time_start.strftime('%H:%M')
+        time_end = speech.time_end.strftime('%H:%M')
+        keyboard.append(
+            [
+                InlineKeyboardButton(
+                    f'"{speech.title}" - {time_start} - {time_end}',
+                    callback_data='1'
+                )
+            ]
+        )
+
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    update.message.reply_text(
+        text='Расписание выступлений',
+        reply_markup=reply_markup,
+    )
+
 
 
 def notificate_all(update, context):
@@ -153,51 +160,50 @@ def start_polling(update, context):
 def question_1(update, context):
     global answers
     text = update.message.text
-    answers["name"] = text
+    answers["first_name"] = text
     reply_keyboard = [['Отменить']]
     update.message.reply_text(QUESTION_2,
                               reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True))
     return 2
 
 
-# функция-обработчик ответа на второй вопрос
 def question_2(update, context):
     global answers
     text = update.message.text
-    answers["age"] = text
+    answers["last_name"] = text
     reply_keyboard = [['Отменить']]
     update.message.reply_text(QUESTION_3,
                               reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True))
     return 3
 
 
-# функция-обработчик ответа на третий вопрос
+# функция-обработчик ответа на второй вопрос
 def question_3(update, context):
     global answers
     text = update.message.text
-    answers["job"] = text
+    answers["age"] = text
     reply_keyboard = [['Отменить']]
     update.message.reply_text(QUESTION_4,
                               reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True))
     return 4
 
 
-# функция-обработчик ответа на четвертый вопрос
+# функция-обработчик ответа на третий вопрос
 def question_4(update, context):
     global answers
     text = update.message.text
-    answers["stack"] = text
+    answers["job"] = text
     reply_keyboard = [['Отменить']]
     update.message.reply_text(QUESTION_5,
                               reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True))
     return 5
 
 
-# функция-обработчик ответа на пятый вопрос
+# функция-обработчик ответа на четвертый вопрос
 def question_5(update, context):
     global answers
     text = update.message.text
-    answers["hobby"] = text
+    answers["stack"] = text
     reply_keyboard = [['Отменить']]
     update.message.reply_text(QUESTION_6,
                               reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True))
@@ -208,22 +214,48 @@ def question_5(update, context):
 def question_6(update, context):
     global answers
     text = update.message.text
-    answers["purpose"] = text
+    answers["hobby"] = text
     reply_keyboard = [['Отменить']]
     update.message.reply_text(QUESTION_7,
                               reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True))
     return 7
 
 
-# функция-обработчик ответа на пятый вопрос и окончания опроса
+# функция-обработчик ответа на пятый вопрос
 def question_7(update, context):
     global answers
     text = update.message.text
+    answers["purpose"] = text
+    reply_keyboard = [['Отменить']]
+    update.message.reply_text(QUESTION_8,
+                              reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True))
+    return 8
+
+
+def question_8(update, context):
+    global answers
+    text = update.message.text
     answers["region"] = text
+    reply_keyboard = [['Отменить']]
+    update.message.reply_text(QUESTION_9,
+                              reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True))
+    return 9
+
+
+# функция-обработчик ответа на пятый вопрос и окончания опроса
+def question_9(update, context):
+    global answers
+    text = update.message.text
+    answers["grade"] = text
     update.message.reply_text('✅ Спасибо за ответы на вопросы! Ваши данные были сохранены.',
                               reply_markup=ReplyKeyboardRemove())
     print(answers)
     # ❓ Добавить отправление данных в БД и запуск главного меню для перепроверки пользователя
+    user_id = update.effective_chat.id
+    create_cutaway(user_id, answers)
+    user = User.objects.get(tg_id=user_id)
+    user.role = Role.objects.get(role='customer')
+    user.save()
 
     # очищаем словарь с ответами после завершения опроса
     answers = {}
@@ -307,15 +339,21 @@ def find_interlocutor(update, context):
         return
 
     # ❓ Заменить на запрос к БД по рандомному числу
-    customer_form = {'tg_nick': '@Fulllmental', 'name': 'Арсений', 'age': '15', 'job': 'Лоботряс', 'stack': 'Питон', 'hobby': 'Игра на нервах', 'purpose': 'Найти работу', 'region': 'Москва'}
+    # customer_form = {'tg_nick': '@Fulllmental', 'name': 'Арсений', 'age': '15', 'job': 'Лоботряс', 'stack': 'Питон', 'hobby': 'Игра на нервах', 'purpose': 'Найти работу', 'region': 'Москва'}
+    random_user = get_random_user()
+    customer_form = random_user.cutaway.first()
+
     # конец тестовых данных
 
-    promo_form = f'👋 Приветствую, меня зовут {customer_form["name"]}\n' \    
-                 f'<b>мне</b> {customer_form["age"]}, обычно я: {customer_form["job"]}\n' \
-                 f'<b>хобби</b>: {customer_form["hobby"]}\n' \
-                 f'<b>стэк технологий</b>: {customer_form["stack"]}\n' \
-                 f'<b>цель</b> общения: {customer_form["purpose"]}\n' \
-                 f'<b>регион</b>: {customer_form["region"]}\n<b>контакт</b>: {customer_form["tg_nick"]}'
+    promo_form = f'👋 Приветствую, меня зовут {customer_form.first_name} {customer_form.last_name}\n' \
+                 f'<b>мне</b> {customer_form.age}\n' \
+                 f'<b>моя специализация</b>: {customer_form.specialization}\n' \
+                 f'<b>хобби</b>: {customer_form.hobby}\n' \
+                 f'<b>стэк технологий</b>: {customer_form.stack}\n' \
+                 f'<b>цель</b> общения: {customer_form.objective}\n' \
+                 f'<b>регион</b>: {customer_form.location}\n' \
+                 f'<b>грейд</b>: {customer_form.grade}\n' \
+                 f'<b>контакт</b>: {random_user.username}'
     keyboard = ReplyKeyboardMarkup(menu_patterns[menu_pattern], one_time_keyboard=True)
     bot.send_message(chat_id=update.message.chat_id,
                      text=promo_form,
@@ -328,7 +366,8 @@ def send_announcement(update, context):
 
     # ❓ Запросить все контакты из БД в список user_ids
     print(announcement_text)
-    user_ids = [406682076]
+    user_ids = [user.tg_id for user in User.objects.all()]
+    print(user_ids)
     # конец тестовых данных
 
     for user_id in user_ids:
@@ -354,86 +393,90 @@ def cancel(update, context):
     return ConversationHandler.END
 
 
-if __name__ == '__main__':
-    answers = {}
-    user_survey = {}
-    menu_patterns = {'admin': admin_main_menu,
-                     'speaker': speaker_main_menu,
-                     'customer': customer_main_menu,
-                     'unregistered_customer': customer_main_menu}
+answers = {}
+user_survey = {}
+menu_patterns = {'admin': admin_main_menu,
+                 'speaker': speaker_main_menu,
+                 'customer': customer_main_menu,
+                 'unregistered_customer': customer_main_menu}
 
-    # определяем константы для опроса
-    QUESTION_1 = 'Введите ваше ФИО:'
-    QUESTION_2 = 'Сколько вам лет?'
-    QUESTION_3 = 'Какой ваш род деятельности?'
-    QUESTION_4 = 'Поделитесь своим стэком технологий?'
-    QUESTION_5 = 'Какое у вас хобби?'
-    QUESTION_6 = 'Какая у вас цель знакомства?'
-    QUESTION_7 = 'Из какого вы региона?'
+# определяем константы для опроса
+QUESTION_1 = 'Введите ваше имя:'
+QUESTION_2 = 'Введите вашу фамилию:'
+QUESTION_3 = 'Сколько вам лет?'
+QUESTION_4 = 'Какой ваш род деятельности?'
+QUESTION_5 = 'Поделитесь своим стэком технологий?'
+QUESTION_6 = 'Какое у вас хобби?'
+QUESTION_7 = 'Какая у вас цель знакомства?'
+QUESTION_8 = 'Из какого вы региона?'
+QUESTION_9 = 'Какой у вас грейд?'
 
-    registration = ConversationHandler(
-        entry_points=[MessageHandler(Filters.text('✅ Зарегистрировать анкету'), start_polling)],
-        states={
-            1: [MessageHandler(Filters.regex('^(Отменить)$'), cancel),
-                MessageHandler(Filters.text, question_1)],
-            2: [MessageHandler(Filters.regex('^(Отменить)$'), cancel),
-                MessageHandler(Filters.text, question_2)],
-            3: [MessageHandler(Filters.regex('^(Отменить)$'), cancel),
-                MessageHandler(Filters.text, question_3)],
-            4: [MessageHandler(Filters.regex('^(Отменить)$'), cancel),
-                MessageHandler(Filters.text, question_4)],
-            5: [MessageHandler(Filters.regex('^(Отменить)$'), cancel),
-                MessageHandler(Filters.text, question_5)],
-            6: [MessageHandler(Filters.regex('^(Отменить)$'), cancel),
-                MessageHandler(Filters.text, question_6)],
-            7: [MessageHandler(Filters.regex('^(Отменить)$'), cancel),
-                MessageHandler(Filters.text, question_7)],
-        },
-        fallbacks=[CommandHandler('cancel', cancel)]
-    )
+registration = ConversationHandler(
+    entry_points=[MessageHandler(Filters.text('✅ Зарегистрировать анкету'), start_polling)],
+    states={
+        1: [MessageHandler(Filters.regex('^(Отменить)$'), cancel),
+            MessageHandler(Filters.text, question_1)],
+        2: [MessageHandler(Filters.regex('^(Отменить)$'), cancel),
+            MessageHandler(Filters.text, question_2)],
+        3: [MessageHandler(Filters.regex('^(Отменить)$'), cancel),
+            MessageHandler(Filters.text, question_3)],
+        4: [MessageHandler(Filters.regex('^(Отменить)$'), cancel),
+            MessageHandler(Filters.text, question_4)],
+        5: [MessageHandler(Filters.regex('^(Отменить)$'), cancel),
+            MessageHandler(Filters.text, question_5)],
+        6: [MessageHandler(Filters.regex('^(Отменить)$'), cancel),
+            MessageHandler(Filters.text, question_6)],
+        7: [MessageHandler(Filters.regex('^(Отменить)$'), cancel),
+            MessageHandler(Filters.text, question_7)],
+        8: [MessageHandler(Filters.regex('^(Отменить)$'), cancel),
+            MessageHandler(Filters.text, question_8)],
+        9: [MessageHandler(Filters.regex('^(Отменить)$'), cancel),
+            MessageHandler(Filters.text, question_9)],
+    },
+    fallbacks=[CommandHandler('cancel', cancel)]
+)
 
-    question_to_speaker = ConversationHandler(
-        entry_points=[MessageHandler(Filters.text('❔ Задать вопрос'), ask_question)],
-        states={
-            1: [MessageHandler(Filters.regex('^(Отменить)$'), cancel),
-                MessageHandler(Filters.text, send_question)],
-        },
-        fallbacks=[CommandHandler('cancel', cancel)]
-    )
+question_to_speaker = ConversationHandler(
+    entry_points=[MessageHandler(Filters.text('❔ Задать вопрос'), ask_question)],
+    states={
+        1: [MessageHandler(Filters.regex('^(Отменить)$'), cancel),
+            MessageHandler(Filters.text, send_question)],
+    },
+    fallbacks=[CommandHandler('cancel', cancel)]
+)
 
-    mass_sending = ConversationHandler(
-        entry_points=[MessageHandler(Filters.text('📢 Массовая рассылка'), get_admin_text)],
-        states={
-            1: [MessageHandler(Filters.regex('^(Отменить)$'), cancel),
-                MessageHandler(Filters.text, send_announcement)],
-        },
-        fallbacks=[CommandHandler('cancel', cancel)]
-    )
+mass_sending = ConversationHandler(
+    entry_points=[MessageHandler(Filters.text('📢 Массовая рассылка'), get_admin_text)],
+    states={
+        1: [MessageHandler(Filters.regex('^(Отменить)$'), cancel),
+            MessageHandler(Filters.text, send_announcement)],
+    },
+    fallbacks=[CommandHandler('cancel', cancel)]
+)
 
-    load_dotenv()
-    tg_token = os.getenv('TELEGRAM_BOT_TOKEN')
-    updater = Updater(tg_token)
-    bot = Bot(tg_token)
-    dispatcher = updater.dispatcher
+load_dotenv()
+tg_token = os.getenv('TELEGRAM_BOT_TOKEN')
+updater = Updater(tg_token)
+bot = Bot(tg_token)
+dispatcher = updater.dispatcher
 
-    dispatcher.add_handler(CommandHandler('start', start))
+dispatcher.add_handler(CommandHandler('start', start))
 
-    dispatcher.add_handler(MessageHandler(Filters.text('🎤 Меню докладчика'), open_speaker_menu))
-    dispatcher.add_handler(MessageHandler(Filters.text('🤓 Меню участника'), open_customer_menu))
-    dispatcher.add_handler(MessageHandler(Filters.text('❓ ЧаВо'), get_info))
-    dispatcher.add_handler(MessageHandler(Filters.text('🕜 Расписание'), get_info))
-    dispatcher.add_handler(MessageHandler(Filters.text('👋 Найти собеседника'), find_interlocutor))
-    dispatcher.add_handler(MessageHandler(Filters.text('👈 Назад'), go_back))
+dispatcher.add_handler(MessageHandler(Filters.text('🎤 Меню докладчика'), open_speaker_menu))
+dispatcher.add_handler(MessageHandler(Filters.text('🤓 Меню участника'), open_customer_menu))
+dispatcher.add_handler(MessageHandler(Filters.text('❓ ЧаВо'), get_info))
+dispatcher.add_handler(MessageHandler(Filters.text('🕜 Расписание'), get_schedule))
+dispatcher.add_handler(MessageHandler(Filters.text('👋 Найти собеседника'), find_interlocutor))
+dispatcher.add_handler(MessageHandler(Filters.text('👈 Назад'), go_back))
 
-    dispatcher.add_handler(registration)
-    dispatcher.add_handler(question_to_speaker)
-    dispatcher.add_handler(mass_sending)
+dispatcher.add_handler(registration)
+dispatcher.add_handler(question_to_speaker)
+dispatcher.add_handler(mass_sending)
 
-    dispatcher.add_handler(MessageHandler(Filters.text('✨ Ответить на вопрос'), answer_question))
-    dispatcher.add_handler(CallbackQueryHandler(get_next_question, pattern='^get_next_question$'))
+dispatcher.add_handler(MessageHandler(Filters.text('✨ Ответить на вопрос'), answer_question))
+dispatcher.add_handler(CallbackQueryHandler(get_next_question, pattern='^get_next_question$'))
 
-    # доделать
-    dispatcher.add_handler(MessageHandler(Filters.text('💸 Донат'), under_construction))
+# доделать
+dispatcher.add_handler(MessageHandler(Filters.text('💸 Донат'), under_construction))
 
-    dispatcher.add_error_handler(error)
-    updater.start_polling()
+dispatcher.add_error_handler(error)
