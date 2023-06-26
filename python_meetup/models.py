@@ -2,6 +2,7 @@ from django.db import models
 
 # Посмотреть метаклассы, добавить ордеринг по времени для выступлений, мб еще что то
 
+
 class Role(models.Model):
     ROLES = [
         ('admin', 'admin'),

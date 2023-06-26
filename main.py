@@ -17,6 +17,8 @@ from python_meetup.views import (
     create_cutaway,
     get_db_schedule,
     get_random_user,
+    get_question,
+    delete_question
 )
 from python_meetup.models import User, Role
 
@@ -26,10 +28,10 @@ from python_meetup.models import User, Role
 #    + 2. Получение данных о расписании и вывод в виде str (строка 106)
 #    + 3. Отправка заполненных данных о посетителе в БД (строка 226)
 #     4. Отправка вопроса в БД (строка 243)
-#     5. Получение вопроса из БД (желательно вместе с id) (строка 275)
-#     6. Удаление вопроса на который дали ответ (удалить по id) (строка 294)
+#    + 5. Получение вопроса из БД (желательно вместе с id) (строка 275)
+#    + 6. Удаление вопроса на который дали ответ (удалить по id) (строка 294)
 #    + 7. Запрос рандомной записи из анкет (строка 309)
-#     8. Запросить все tg_id посетителей из БД (массовая рассылка) (строка 329)
+#    + 8. Запросить все tg_id посетителей из БД (массовая рассылка) (строка 329)
 
 
 # Главное меню
@@ -305,14 +307,21 @@ def answer_question(update, context):
         return
 
     # ❓ Заменить на запрос к БД
-    asked_question = 'Чо у вас тут происходит?'
+    asked_question = get_question()
+    if not asked_question:
+        no_question_text = 'Кажется неотвеченных вопросов не осталось, ну разве это не здорово?' \
+                            '\nХотя...предлагаю напомнить, что худший вопрос тот, что не был задан =)'
+        keyboard = ReplyKeyboardMarkup(menu_patterns[menu_pattern], one_time_keyboard=True)
+        update.message.reply_text(no_question_text, reply_markup=keyboard)
+        return
+    delete_question(asked_question.id)
     # конец тестовых данных
 
     question_menu = InlineKeyboardButton("Вопрос отвечен", callback_data='get_next_question')
     keyboard = [[question_menu]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     bot.send_message(chat_id=update.message.chat_id,
-                     text=asked_question,
+                     text=asked_question.text,
                      reply_markup=reply_markup)
 
 
@@ -322,6 +331,7 @@ def get_next_question(update, context):
     keyboard = ReplyKeyboardMarkup(speaker_menu, one_time_keyboard=True)
     update.callback_query.message.reply_text('✅ Вопрос отвечен', reply_markup=keyboard)
     bot.delete_message(chat_id=chat_id, message_id=message_id)
+
 
     # ❓ Отправить запрос в БД на удаление записи с вопросом
 
