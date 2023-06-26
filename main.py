@@ -18,7 +18,7 @@ from python_meetup.views import (
     get_db_schedule,
     get_random_user,
 )
-from python_meetup.models import User, Role
+from python_meetup.models import User, Role, Speech, Question
 
 # TO DO
 # Запросы:
@@ -29,7 +29,7 @@ from python_meetup.models import User, Role
 #     5. Получение вопроса из БД (желательно вместе с id) (строка 275)
 #     6. Удаление вопроса на который дали ответ (удалить по id) (строка 294)
 #    + 7. Запрос рандомной записи из анкет (строка 309)
-#     8. Запросить все tg_id посетителей из БД (массовая рассылка) (строка 329)
+#    + 8. Запросить все tg_id посетителей из БД (массовая рассылка) (строка 329)
 
 
 # Главное меню
@@ -41,7 +41,6 @@ def start(update, context):
     message = update.message
     user_id = message.from_user.id
     user_survey.update(check_user(user_id))  # обновляю данные на запрошенные
-    print('после', user_survey)
 
     if user_survey['status'] == 'speaker':
         main_menu = speaker_main_menu
@@ -105,7 +104,7 @@ def get_schedule(update, context):
             [
                 InlineKeyboardButton(
                     f'"{speech.title}" - {time_start} - {time_end}',
-                    callback_data='1'
+                    callback_data=f'speech_{speech.id}'
                 )
             ]
         )
@@ -115,7 +114,41 @@ def get_schedule(update, context):
         text='Расписание выступлений',
         reply_markup=reply_markup,
     )
+    return 1
 
+
+def get_speech_info(update, context):
+    query = update.callback_query
+    query.answer()
+
+    user_id = update.effective_chat.id
+    speech_id = int(query.data[7:])
+    speech = Speech.objects.get(pk=speech_id)
+    context.user_data['speech_id'] = speech_id
+    keyboard = [
+        [
+            InlineKeyboardButton('Задать вопрос', callback_data=f'question_speech_{speech_id}')
+        ]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    query.edit_message_text(
+        text=f'Тема: {speech.title}\n'
+             f'Время начала: {speech.time_start.strftime("%H:%M")}\n'
+             f'Время окончания: {speech.time_end.strftime("%H:%M")}\n'
+             f'Описание: {speech.description}\n'
+             f'Докладчик: {speech.user}\n',
+        reply_markup=reply_markup,
+    )
+    return 2
+
+
+def send_question_callback(update, context):
+    query = update.callback_query
+    query.answer()
+    query.edit_message_text(
+        text='Задайте вопрос в сообщении',
+    )
+    return 3
 
 
 def notificate_all(update, context):
@@ -270,13 +303,19 @@ def ask_question(update, context):
 
 
 def send_question(update, context):
+    menu_pattern = user_survey['status']
     question_text = update.message.text
 
-    # ❓ Отправить вопрос в базу данных
-    print(question_text)
-    # конец тестовых данных
+    speech_id = context.user_data['speech_id']
+    speech = Speech.objects.get(pk=speech_id)
+    user_id = update.effective_chat.id
+    user = User.objects.get(tg_id=user_id)
+    Question.objects.create(
+        user=user,
+        text=question_text,
+        speech=speech
+    )
 
-    menu_pattern = user_survey['status']
     keyboard = ReplyKeyboardMarkup(menu_patterns[menu_pattern], one_time_keyboard=True)
     update.message.reply_text('✅ Ваш вопрос отправлен, теперь стоит дождаться ответа от спикера', reply_markup=keyboard)
 
@@ -325,9 +364,6 @@ def get_next_question(update, context):
 
     # ❓ Отправить запрос в БД на удаление записи с вопросом
 
-    query = update.callback_query
-    query.answer()
-    return
 
 
 def find_interlocutor(update, context):
@@ -436,12 +472,32 @@ registration = ConversationHandler(
     fallbacks=[CommandHandler('cancel', cancel)]
 )
 
+# question_to_speaker = ConversationHandler(
+#     entry_points=[MessageHandler(Filters.text('❔ Задать вопрос'), ask_question)],
+#     states={
+#         1: [MessageHandler(Filters.regex('^(Отменить)$'), cancel),
+#             MessageHandler(Filters.text, send_question)],
+#     },
+#     fallbacks=[CommandHandler('cancel', cancel)]
+# )
+
 question_to_speaker = ConversationHandler(
-    entry_points=[MessageHandler(Filters.text('❔ Задать вопрос'), ask_question)],
+    entry_points=[MessageHandler(Filters.text('🕜 Расписание'), get_schedule)],
     states={
-        1: [MessageHandler(Filters.regex('^(Отменить)$'), cancel),
-            MessageHandler(Filters.text, send_question)],
+        1: [
+            CallbackQueryHandler(get_speech_info, pattern=r'speech_\d+'),
+            MessageHandler(Filters.regex('^(Отменить)$'), cancel),
+        ],
+        2: [
+            CallbackQueryHandler(send_question_callback, pattern=r'question_speech_\d+'),
+            MessageHandler(Filters.regex('^(Отменить)$'), cancel),
+        ],
+        3: [
+            MessageHandler(Filters.text, send_question),
+            MessageHandler(Filters.regex('^(Отменить)$'), cancel),
+        ],
     },
+    allow_reentry=True,
     fallbacks=[CommandHandler('cancel', cancel)]
 )
 
@@ -465,16 +521,20 @@ dispatcher.add_handler(CommandHandler('start', start))
 dispatcher.add_handler(MessageHandler(Filters.text('🎤 Меню докладчика'), open_speaker_menu))
 dispatcher.add_handler(MessageHandler(Filters.text('🤓 Меню участника'), open_customer_menu))
 dispatcher.add_handler(MessageHandler(Filters.text('❓ ЧаВо'), get_info))
-dispatcher.add_handler(MessageHandler(Filters.text('🕜 Расписание'), get_schedule))
+# dispatcher.add_handler(MessageHandler(Filters.text('🕜 Расписание'), get_schedule))
 dispatcher.add_handler(MessageHandler(Filters.text('👋 Найти собеседника'), find_interlocutor))
 dispatcher.add_handler(MessageHandler(Filters.text('👈 Назад'), go_back))
 
 dispatcher.add_handler(registration)
 dispatcher.add_handler(question_to_speaker)
 dispatcher.add_handler(mass_sending)
+# dispatcher.add_handler(mass_sending)
+
 
 dispatcher.add_handler(MessageHandler(Filters.text('✨ Ответить на вопрос'), answer_question))
 dispatcher.add_handler(CallbackQueryHandler(get_next_question, pattern='^get_next_question$'))
+# dispatcher.add_handler(CallbackQueryHandler(get_speech_info, pattern=r'speech_\d+'))
+# dispatcher.add_handler(CallbackQueryHandler(send_question_callback, pattern=r'question_speech_\d+'))
 
 # доделать
 dispatcher.add_handler(MessageHandler(Filters.text('💸 Донат'), under_construction))
