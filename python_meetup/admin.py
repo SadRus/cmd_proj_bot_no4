@@ -11,9 +11,6 @@ from .models import (
 
 class SpeechInline(admin.TabularInline):
     model = Speech
-    ordering = [
-        'time_start',
-    ]
 
 
 @admin.register(Role)

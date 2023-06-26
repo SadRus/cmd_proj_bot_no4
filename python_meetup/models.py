@@ -67,8 +67,6 @@ class Cutaway(models.Model):
     grade = models.CharField('Грейд', max_length=50, blank=True)
 
 
-
-
 class Speech(models.Model):
     user = models.ForeignKey(
         User,
@@ -86,6 +84,9 @@ class Speech(models.Model):
     description = models.TextField('Описание', blank=True)
     time_start = models.DateTimeField('Время начала', blank=True)
     time_end = models.DateTimeField('Время окончания', blank=True)
+
+    class Meta:
+        ordering = ['time_start']
 
     def __str__(self):
         return self.title
