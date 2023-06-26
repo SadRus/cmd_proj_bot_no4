@@ -42,3 +42,12 @@ def create_cutaway(user_id, user_data):
 
 def get_random_user():
     return User.objects.order_by('?').first()
+
+
+def get_question():
+    return Question.objects.order_by('?').first()
+
+
+def delete_question(id):
+    Question.objects.filter(id=id).delete()
+
