@@ -62,9 +62,9 @@ class CutawayAdmin(admin.ModelAdmin):
 @admin.register(Speech)
 class SpeechAdmin(admin.ModelAdmin):
     list_display = [
-        'event',
-        'user',
         'title',
+        'user',
+        'event',
         'time_start',
         'time_end',
     ]
