@@ -26,14 +26,20 @@ speaker_menu = [
 
 # customer menu
 customer_menu = [
-        [KeyboardButton('🕜 Расписание'), KeyboardButton('❔ Задать вопрос')],
+        [
+            KeyboardButton('🕜 Расписание'),
+            # KeyboardButton('❔ Задать вопрос')
+        ],
         [KeyboardButton('👋 Найти собеседника')],
         [KeyboardButton('👈 Назад')]
     ]
 
 # unregistered customer menu
 unregistered_customer_menu = [
-        [KeyboardButton('🕜 Расписание'), KeyboardButton('❔ Задать вопрос')],
+        [
+            KeyboardButton('🕜 Расписание'),
+            # KeyboardButton('❔ Задать вопрос')
+        ],
         [KeyboardButton('✅ Зарегистрировать анкету')],
         [KeyboardButton('👈 Назад')]
     ]
