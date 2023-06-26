@@ -4,9 +4,16 @@ from dotenv import load_dotenv
 from telegram import ReplyKeyboardMarkup, Bot, ReplyKeyboardRemove, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, ConversationHandler, CallbackQueryHandler
 
-from layouts import customer_main_menu, speaker_main_menu, admin_main_menu, unregistered_customer_menu, customer_menu, \
-    speaker_menu
-
+from layouts import (
+    customer_main_menu,
+    speaker_main_menu,
+    admin_main_menu,
+    unregistered_customer_menu,
+    customer_menu,
+    speaker_menu,
+)
+# from python_meetup.views import check_user
+from python_meetup.views import check_user
 
 # TO DO
 # Запросы:
@@ -25,19 +32,6 @@ from layouts import customer_main_menu, speaker_main_menu, admin_main_menu, unre
 #  'speaker'
 #  'customer'
 #  'unregistered_customer'
-
-def check_user(user_id): # + запрос
-    if user_id == 406682076:
-        user_survey = {
-            'id': 406682076,
-            'status': 'admin'
-                    }
-    else:
-        user_survey = {
-            'id': 406682076,
-            'status': 'customer'
-        }
-    return user_survey
 
 
 # Главное меню
@@ -310,7 +304,7 @@ def find_interlocutor(update, context):
     customer_form = {'tg_nick': '@Fulllmental', 'name': 'Арсений', 'age': '15', 'job': 'Лоботряс', 'stack': 'Питон', 'hobby': 'Игра на нервах', 'purpose': 'Найти работу', 'region': 'Москва'}
     # конец тестовых данных
 
-    promo_form = f'👋 Приветствую, меня зовут {customer_form["name"]}\n' \    
+    promo_form = f'👋 Приветствую, меня зовут {customer_form["name"]}\n' \
                  f'<b>мне</b> {customer_form["age"]}, обычно я: {customer_form["job"]}\n' \
                  f'<b>хобби</b>: {customer_form["hobby"]}\n' \
                  f'<b>стэк технологий</b>: {customer_form["stack"]}\n' \
@@ -354,86 +348,84 @@ def cancel(update, context):
     return ConversationHandler.END
 
 
-if __name__ == '__main__':
-    answers = {}
-    user_survey = {}
-    menu_patterns = {'admin': admin_main_menu,
-                     'speaker': speaker_main_menu,
-                     'customer': customer_main_menu,
-                     'unregistered_customer': customer_main_menu}
+answers = {}
+user_survey = {}
+menu_patterns = {'admin': admin_main_menu,
+                 'speaker': speaker_main_menu,
+                 'customer': customer_main_menu,
+                 'unregistered_customer': customer_main_menu}
 
-    # определяем константы для опроса
-    QUESTION_1 = 'Введите ваше ФИО:'
-    QUESTION_2 = 'Сколько вам лет?'
-    QUESTION_3 = 'Какой ваш род деятельности?'
-    QUESTION_4 = 'Поделитесь своим стэком технологий?'
-    QUESTION_5 = 'Какое у вас хобби?'
-    QUESTION_6 = 'Какая у вас цель знакомства?'
-    QUESTION_7 = 'Из какого вы региона?'
+# определяем константы для опроса
+QUESTION_1 = 'Введите ваше ФИО:'
+QUESTION_2 = 'Сколько вам лет?'
+QUESTION_3 = 'Какой ваш род деятельности?'
+QUESTION_4 = 'Поделитесь своим стэком технологий?'
+QUESTION_5 = 'Какое у вас хобби?'
+QUESTION_6 = 'Какая у вас цель знакомства?'
+QUESTION_7 = 'Из какого вы региона?'
 
-    registration = ConversationHandler(
-        entry_points=[MessageHandler(Filters.text('✅ Зарегистрировать анкету'), start_polling)],
-        states={
-            1: [MessageHandler(Filters.regex('^(Отменить)$'), cancel),
-                MessageHandler(Filters.text, question_1)],
-            2: [MessageHandler(Filters.regex('^(Отменить)$'), cancel),
-                MessageHandler(Filters.text, question_2)],
-            3: [MessageHandler(Filters.regex('^(Отменить)$'), cancel),
-                MessageHandler(Filters.text, question_3)],
-            4: [MessageHandler(Filters.regex('^(Отменить)$'), cancel),
-                MessageHandler(Filters.text, question_4)],
-            5: [MessageHandler(Filters.regex('^(Отменить)$'), cancel),
-                MessageHandler(Filters.text, question_5)],
-            6: [MessageHandler(Filters.regex('^(Отменить)$'), cancel),
-                MessageHandler(Filters.text, question_6)],
-            7: [MessageHandler(Filters.regex('^(Отменить)$'), cancel),
-                MessageHandler(Filters.text, question_7)],
-        },
-        fallbacks=[CommandHandler('cancel', cancel)]
-    )
+registration = ConversationHandler(
+    entry_points=[MessageHandler(Filters.text('✅ Зарегистрировать анкету'), start_polling)],
+    states={
+        1: [MessageHandler(Filters.regex('^(Отменить)$'), cancel),
+            MessageHandler(Filters.text, question_1)],
+        2: [MessageHandler(Filters.regex('^(Отменить)$'), cancel),
+            MessageHandler(Filters.text, question_2)],
+        3: [MessageHandler(Filters.regex('^(Отменить)$'), cancel),
+            MessageHandler(Filters.text, question_3)],
+        4: [MessageHandler(Filters.regex('^(Отменить)$'), cancel),
+            MessageHandler(Filters.text, question_4)],
+        5: [MessageHandler(Filters.regex('^(Отменить)$'), cancel),
+            MessageHandler(Filters.text, question_5)],
+        6: [MessageHandler(Filters.regex('^(Отменить)$'), cancel),
+            MessageHandler(Filters.text, question_6)],
+        7: [MessageHandler(Filters.regex('^(Отменить)$'), cancel),
+            MessageHandler(Filters.text, question_7)],
+    },
+    fallbacks=[CommandHandler('cancel', cancel)]
+)
 
-    question_to_speaker = ConversationHandler(
-        entry_points=[MessageHandler(Filters.text('❔ Задать вопрос'), ask_question)],
-        states={
-            1: [MessageHandler(Filters.regex('^(Отменить)$'), cancel),
-                MessageHandler(Filters.text, send_question)],
-        },
-        fallbacks=[CommandHandler('cancel', cancel)]
-    )
+question_to_speaker = ConversationHandler(
+    entry_points=[MessageHandler(Filters.text('❔ Задать вопрос'), ask_question)],
+    states={
+        1: [MessageHandler(Filters.regex('^(Отменить)$'), cancel),
+            MessageHandler(Filters.text, send_question)],
+    },
+    fallbacks=[CommandHandler('cancel', cancel)]
+)
 
-    mass_sending = ConversationHandler(
-        entry_points=[MessageHandler(Filters.text('📢 Массовая рассылка'), get_admin_text)],
-        states={
-            1: [MessageHandler(Filters.regex('^(Отменить)$'), cancel),
-                MessageHandler(Filters.text, send_announcement)],
-        },
-        fallbacks=[CommandHandler('cancel', cancel)]
-    )
+mass_sending = ConversationHandler(
+    entry_points=[MessageHandler(Filters.text('📢 Массовая рассылка'), get_admin_text)],
+    states={
+        1: [MessageHandler(Filters.regex('^(Отменить)$'), cancel),
+            MessageHandler(Filters.text, send_announcement)],
+    },
+    fallbacks=[CommandHandler('cancel', cancel)]
+)
 
-    load_dotenv()
-    tg_token = os.getenv('TELEGRAM_BOT_TOKEN')
-    updater = Updater(tg_token)
-    bot = Bot(tg_token)
-    dispatcher = updater.dispatcher
+load_dotenv()
+tg_token = os.getenv('TELEGRAM_BOT_TOKEN')
+updater = Updater(tg_token)
+bot = Bot(tg_token)
+dispatcher = updater.dispatcher
 
-    dispatcher.add_handler(CommandHandler('start', start))
+dispatcher.add_handler(CommandHandler('start', start))
 
-    dispatcher.add_handler(MessageHandler(Filters.text('🎤 Меню докладчика'), open_speaker_menu))
-    dispatcher.add_handler(MessageHandler(Filters.text('🤓 Меню участника'), open_customer_menu))
-    dispatcher.add_handler(MessageHandler(Filters.text('❓ ЧаВо'), get_info))
-    dispatcher.add_handler(MessageHandler(Filters.text('🕜 Расписание'), get_info))
-    dispatcher.add_handler(MessageHandler(Filters.text('👋 Найти собеседника'), find_interlocutor))
-    dispatcher.add_handler(MessageHandler(Filters.text('👈 Назад'), go_back))
+dispatcher.add_handler(MessageHandler(Filters.text('🎤 Меню докладчика'), open_speaker_menu))
+dispatcher.add_handler(MessageHandler(Filters.text('🤓 Меню участника'), open_customer_menu))
+dispatcher.add_handler(MessageHandler(Filters.text('❓ ЧаВо'), get_info))
+dispatcher.add_handler(MessageHandler(Filters.text('🕜 Расписание'), get_info))
+dispatcher.add_handler(MessageHandler(Filters.text('👋 Найти собеседника'), find_interlocutor))
+dispatcher.add_handler(MessageHandler(Filters.text('👈 Назад'), go_back))
 
-    dispatcher.add_handler(registration)
-    dispatcher.add_handler(question_to_speaker)
-    dispatcher.add_handler(mass_sending)
+dispatcher.add_handler(registration)
+dispatcher.add_handler(question_to_speaker)
+dispatcher.add_handler(mass_sending)
 
-    dispatcher.add_handler(MessageHandler(Filters.text('✨ Ответить на вопрос'), answer_question))
-    dispatcher.add_handler(CallbackQueryHandler(get_next_question, pattern='^get_next_question$'))
+dispatcher.add_handler(MessageHandler(Filters.text('✨ Ответить на вопрос'), answer_question))
+dispatcher.add_handler(CallbackQueryHandler(get_next_question, pattern='^get_next_question$'))
 
-    # доделать
-    dispatcher.add_handler(MessageHandler(Filters.text('💸 Донат'), under_construction))
+# доделать
+dispatcher.add_handler(MessageHandler(Filters.text('💸 Донат'), under_construction))
 
-    dispatcher.add_error_handler(error)
-    updater.start_polling()
+dispatcher.add_error_handler(error)
